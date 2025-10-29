@@ -1,10 +1,28 @@
 import streamlit as st
 import random
 from streamlit_drawable_canvas import st_canvas
+import os # 파일 경로 처리를 위해 추가
 
 # ----------------------------------------------------
-# 1. 문제 데이터 (총 30개)
-# 수식 오류 재검토 및 수정 완료 (특히 \\frac 사용)
+# 0. 이미지 파일 경로 설정 함수
+# ----------------------------------------------------
+def get_image_path(image_name):
+    """지정된 이미지 이름에 해당하는 전체 파일 경로를 반환합니다."""
+    # 현재 스크립트 파일의 디렉토리에 'images' 폴더가 있다고 가정
+    base_dir = os.path.dirname(__file__)
+    image_path = os.path.join(base_dir, "images", image_name)
+    return image_path
+
+def display_feedback_image(image_name):
+    """이미지를 Streamlit 앱에 표시합니다."""
+    path = get_image_path(image_name)
+    if os.path.exists(path):
+        st.image(path, width=200) # 이미지 크기 조정 가능
+    else:
+        st.warning(f"이미지 파일 '{image_name}'을(를) 찾을 수 없습니다. 경로: {path}")
+
+# ----------------------------------------------------
+# 1. 문제 데이터 (총 30개) - 이전과 동일
 # ----------------------------------------------------
 FULL_QUIZ_DATA = [
     # OX 문제 15개
@@ -45,8 +63,6 @@ FULL_QUIZ_DATA = [
 # ----------------------------------------------------
 # 2. 세션 초기화 및 문제 선택 로직
 # ----------------------------------------------------
-# (이하 생략 - 이전 코드와 동일)
-
 def restart_quiz():
     """세션 상태를 초기화하고 새로운 10문제를 랜덤으로 선택합니다."""
     st.session_state.question_indices = random.sample(range(len(FULL_QUIZ_DATA)), 10)
@@ -119,6 +135,13 @@ def main():
     if st.session_state.get('quiz_finished', False):
         st.subheader("🎉 퀴즈 종료!")
         st.success(f"최종 점수: **{st.session_state.score} / {len(st.session_state.question_indices)}**")
+        
+        # 최종 결과 이미지
+        if st.session_state.score >= 6: # 6개 이상 맞으면 성공
+            display_feedback_image("success_final.png")
+        else: # 5개 이하 맞으면 탈락
+            display_feedback_image("fail_final.png")
+            
         return
 
     # ----------------------------------------------------
@@ -136,9 +159,13 @@ def main():
     st.subheader(f"문제 {q_number}/{total_questions} (유형: {'O/X' if q_data['type'] == 'ox' else '주관식'})")
     st.markdown(f"**{q_data['q']}**")
 
-    # 오답 횟수 표시
-    if st.session_state.incorrect_count > 0 and st.session_state.is_last_correct is False:
+    # 오답 횟수 및 이미지 표시
+    if st.session_state.incorrect_count == 1 and st.session_state.is_last_correct is False:
         st.error(f"❌ 틀렸습니다! (재시도: {st.session_state.incorrect_count}회)")
+        display_feedback_image("fail_1.png")
+    elif st.session_state.incorrect_count >= 2 and st.session_state.is_last_correct is False:
+        st.error(f"❌ 틀렸습니다! (재시도: {st.session_state.incorrect_count}회)")
+        display_feedback_image("fail_2.png")
     
     # 두 번 틀려서 풀이 강제 노출 및 다음 문제로 이동
     if st.session_state.incorrect_count >= 2:
@@ -187,24 +214,19 @@ def main():
         drawing_mode = st.selectbox("도구 선택", ["freedraw", "line", "rect", "circle", "transform"], index=0, key=f"tool_{st.session_state.canvas_key}")
         stroke_color = st.color_picker("펜/하이라이트 색상", "#000000", key=f"color_{st.session_state.canvas_key}")
         stroke_width = st.slider("펜 두께", 1, 20, 3, key=f"width_{st.session_state.canvas_key}")
-        # 지우개 기능 (색상을 배경과 같게 설정)
+        
         if st.button("지우개", key=f"eraser_{st.session_state.canvas_key}"):
-            # st.rerun()을 사용하지 않고 상태만 변경하여 캔버스에 적용되도록 함. (Canvas는 Stateful)
             st.session_state[f"color_{st.session_state.canvas_key}"] = "#FFFFFF"
-            st.rerun() # 색상 변경 후 재실행하여 적용
+            st.rerun() 
             
-        # 캔버스 초기화 (전체 지우기) - 키 변경을 통해 전체 초기화
         if st.button("전체 지우기", key=f"clear_canvas_{st.session_state.canvas_key}"):
             st.session_state.canvas_key += 1
             st.rerun()
 
     with col_canvas:
-        # 캔버스 컴포넌트
-        # st_canvas는 key가 변경될 때 초기화되므로, next_question에서 key를 증가시키는 로직이 "다음 문제에서 풀이 지우기"를 구현함.
         canvas_result = st_canvas(
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=stroke_width,
-            # 현재 선택된 색상을 사용 (지우개 버튼을 눌렀을 경우 흰색이 됨)
             stroke_color=st.session_state.get(f"color_{st.session_state.canvas_key}", "#000000"), 
             background_color="#FFFFFF",
             update_streamlit=True,
@@ -219,6 +241,7 @@ def main():
     # ----------------------------------------------------
     if st.session_state.get('show_explanation'):
         st.success("✅ **정답입니다!** 풀이를 확인하세요.")
+        display_feedback_image("correct_1.png") # 정답 이미지
         st.info(f"**정답:** {q_data['ans']} ({'정수' if q_data['type'] == 'sub' else 'O/X'})")
         st.success(f"**풀이:** {q_data['exp']}")
         
