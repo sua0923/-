@@ -1,25 +1,28 @@
 import streamlit as st
 import random
 from streamlit_drawable_canvas import st_canvas
-import os # 파일 경로 처리를 위해 추가
+import os
 
 # ----------------------------------------------------
-# 0. 이미지 파일 경로 설정 함수
+# 0. 이미지 파일 경로 설정 함수 (JPEG 수정)
 # ----------------------------------------------------
-def get_image_path(image_name):
-    """지정된 이미지 이름에 해당하는 전체 파일 경로를 반환합니다."""
-    # 현재 스크립트 파일의 디렉토리에 'images' 폴더가 있다고 가정
+def get_image_path(image_name_base):
+    """지정된 이미지 이름에 해당하는 전체 파일 경로를 반환합니다. (확장자: .jpeg)"""
+    # .jpeg 확장자를 사용하도록 수정
+    image_name = image_name_base.replace(".png", ".jpeg")
     base_dir = os.path.dirname(__file__)
     image_path = os.path.join(base_dir, "images", image_name)
     return image_path
 
-def display_feedback_image(image_name):
+def display_feedback_image(image_name_base):
     """이미지를 Streamlit 앱에 표시합니다."""
-    path = get_image_path(image_name)
+    path = get_image_path(image_name_base)
     if os.path.exists(path):
         st.image(path, width=200) # 이미지 크기 조정 가능
     else:
-        st.warning(f"이미지 파일 '{image_name}'을(를) 찾을 수 없습니다. 경로: {path}")
+        # 이미지를 찾을 수 없는 경우, 사용자에게 어떤 파일이 필요한지 알려줍니다.
+        st.warning(f"이미지 파일 '{image_name_base.replace('.png', '.jpeg')}'을(를) 찾을 수 없습니다. (경로: {path})")
+
 
 # ----------------------------------------------------
 # 1. 문제 데이터 (총 30개) - 이전과 동일
@@ -74,7 +77,7 @@ def restart_quiz():
     st.session_state.quiz_finished = False
     st.session_state.quiz_initialized = True
     st.session_state.is_last_correct = None
-    st.session_state.canvas_key = 0 # 캔버스 초기화를 위한 키 초기화
+    st.session_state.canvas_key = 0
 
 def next_question():
     """다음 문제로 넘어가거나 퀴즈를 종료하고, 캔버스를 초기화합니다."""
@@ -82,7 +85,7 @@ def next_question():
     st.session_state.incorrect_count = 0
     st.session_state.show_explanation = False
     st.session_state.is_last_correct = None
-    st.session_state.canvas_key += 1 # 캔버스 초기화를 위해 키 값 증가
+    st.session_state.canvas_key += 1
     
     if st.session_state.current_index >= len(st.session_state.question_indices):
         st.balloons()
@@ -113,7 +116,6 @@ def main():
 
     st.title("🧠 유리식 마스터 10문제 퀴즈")
     
-    # 퀴즈 재시작 버튼
     if st.button("🔄 새로운 10문제로 다시 풀기", key='restart_btn_top'):
         restart_quiz()
         st.rerun()
@@ -137,10 +139,10 @@ def main():
         st.success(f"최종 점수: **{st.session_state.score} / {len(st.session_state.question_indices)}**")
         
         # 최종 결과 이미지
-        if st.session_state.score >= 6: # 6개 이상 맞으면 성공
-            display_feedback_image("success_final.png")
-        else: # 5개 이하 맞으면 탈락
-            display_feedback_image("fail_final.png")
+        if st.session_state.score >= 6:
+            display_feedback_image("success_final.jpeg")
+        else:
+            display_feedback_image("fail_final.jpeg")
             
         return
 
@@ -150,22 +152,21 @@ def main():
     q_index = st.session_state.question_indices[st.session_state.current_index]
     q_data = FULL_QUIZ_DATA[q_index]
     q_number = st.session_state.current_index + 1
-    total_questions = len(st.session_state.question_indices)
 
     # 난이도 표시
     level_color = {"상": "red", "중": "orange", "하": "green"}
     st.markdown(f"#### 난이도: <span style='color:{level_color.get(q_data['level'], 'gray')};'>**{q_data['level']}**</span>", unsafe_allow_html=True)
     
-    st.subheader(f"문제 {q_number}/{total_questions} (유형: {'O/X' if q_data['type'] == 'ox' else '주관식'})")
+    st.subheader(f"문제 {q_number}/{len(st.session_state.question_indices)} (유형: {'O/X' if q_data['type'] == 'ox' else '주관식'})")
     st.markdown(f"**{q_data['q']}**")
 
     # 오답 횟수 및 이미지 표시
     if st.session_state.incorrect_count == 1 and st.session_state.is_last_correct is False:
         st.error(f"❌ 틀렸습니다! (재시도: {st.session_state.incorrect_count}회)")
-        display_feedback_image("fail_1.png")
+        display_feedback_image("fail_1.jpeg")
     elif st.session_state.incorrect_count >= 2 and st.session_state.is_last_correct is False:
         st.error(f"❌ 틀렸습니다! (재시도: {st.session_state.incorrect_count}회)")
-        display_feedback_image("fail_2.png")
+        display_feedback_image("fail_2.jpeg")
     
     # 두 번 틀려서 풀이 강제 노출 및 다음 문제로 이동
     if st.session_state.incorrect_count >= 2:
@@ -182,7 +183,7 @@ def main():
         user_input = None
         if q_data['type'] == 'ox':
             user_input = st.radio("정답은?", ['O', 'X'], key='user_ox')
-        else: # 주관식
+        else:
             user_input = st.text_input("정답을 정수로 입력하세요:", key='user_sub')
 
         submit_button = st.form_submit_button("제출")
@@ -241,11 +242,10 @@ def main():
     # ----------------------------------------------------
     if st.session_state.get('show_explanation'):
         st.success("✅ **정답입니다!** 풀이를 확인하세요.")
-        display_feedback_image("correct_1.png") # 정답 이미지
+        display_feedback_image("correct_1.jpeg") # 정답 이미지
         st.info(f"**정답:** {q_data['ans']} ({'정수' if q_data['type'] == 'sub' else 'O/X'})")
         st.success(f"**풀이:** {q_data['exp']}")
         
-        # 다음 문제로 이동 버튼
         if st.button("다음 문제 풀기", key='correct_next_btn'):
             next_question()
             st.rerun()
