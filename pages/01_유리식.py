@@ -4,13 +4,13 @@ from streamlit_drawable_canvas import st_canvas
 
 # ----------------------------------------------------
 # 1. 문제 데이터 (총 30개)
-# 난이도 ('상', '중', '하') 및 'canvas_state' 추가
+# 수식 오류 재검토 및 수정 완료 (특히 \\frac 사용)
 # ----------------------------------------------------
 FULL_QUIZ_DATA = [
     # OX 문제 15개
     {'type': 'ox', 'level': '하', 'q': "유리식 $\\frac{x^2 - 1}{x + 1}$은 분자와 분모가 모두 다항식이므로 유리식이다.", 'ans': 'O', 'exp': "유리식은 (다항식) / (다항식) 꼴로 분자와 분모가 모두 다항식이므로 유리식입니다."},
     {'type': 'ox', 'level': '하', 'q': "다항식 $3x + 5$는 유리식이 아니다.", 'ans': 'X', 'exp': "다항식은 분모가 $1$인 유리식($\\frac{3x+5}{1} = 3x+5$)에 포함되므로 유리식입니다."},
-    {'type': 'ox', 'level': '중', 'q': "$\frac{5}{\sqrt{x}}$는 유리식이다.", 'ans': 'X', 'exp': "분모 $\sqrt{x}$는 다항식이 아니므로 유리식이 아닙니다. 문자의 지수가 음이 아닌 정수여야 다항식입니다."},
+    {'type': 'ox', 'level': '중', 'q': "$\\frac{5}{\\sqrt{x}}$는 유리식이다.", 'ans': 'X', 'exp': "분모 $\\sqrt{x}$는 다항식이 아니므로 유리식이 아닙니다. 문자의 지수가 음이 아닌 정수여야 다항식입니다."},
     {'type': 'ox', 'level': '중', 'q': "유리식 $\\frac{2x}{x-3}$는 $x=3$에서 성립한다.", 'ans': 'X', 'exp': "유리식은 분모가 $0$이 되는 값($x=3$)에서는 정의되지 않아 성립하지 않습니다. 이를 정의역에서 제외합니다."},
     {'type': 'ox', 'level': '중', 'q': "유리식 $\\frac{x-1}{x^2+1}$는 모든 실수 $x$에서 성립한다.", 'ans': 'O', 'exp': "분모 $x^2+1$은 항상 $1$ 이상이므로 $0$이 될 수 없습니다. 따라서 모든 실수에서 성립합니다."},
     {'type': 'ox', 'level': '하', 'q': "$\\frac{x}{0}$는 유리식이다.", 'ans': 'X', 'exp': "분모에 상수 다항식 '0'은 올 수 없습니다. 수학적으로 분모가 0인 식은 정의되지 않습니다."},
@@ -22,7 +22,7 @@ FULL_QUIZ_DATA = [
     {'type': 'ox', 'level': '하', 'q': "다항식 $P(x)$의 유리식 $\\frac{P(x)}{Q(x)}$에 대한 역수는 $\\frac{Q(x)}{P(x)}$이다.", 'ans': 'O', 'exp': "유리식의 역수는 분자와 분모를 바꾼 식입니다."},
     {'type': 'ox', 'level': '중', 'q': "분수식의 정의역은 모든 실수이다.", 'ans': 'X', 'exp': "분수식은 분모를 $0$으로 만드는 $x$의 값을 정의역에서 제외해야 합니다."},
     {'type': 'ox', 'level': '하', 'q': "분수식 $\\frac{x+1}{2}$는 다항식으로 분류된다.", 'ans': 'O', 'exp': "분모가 $0$이 아닌 상수이므로 다항식 $P(x) = \\frac{1}{2}x + \\frac{1}{2}$와 같습니다."},
-    {'type': 'ox', 'level': '상', 'q': "유리식 $\\frac{x^2+1}{x^2+2}$는 모든 실수에서 성립한다.", 'ans': 'O', 'exp': "분모 $x^2+2$는 항상 $2$ 이상이므로 $0$이 될 수 없습니다. 따라서 모든 실수에서 성립합니다."}, # 추가 15번
+    {'type': 'ox', 'level': '상', 'q': "유리식 $\\frac{x^2+1}{x^2+2}$는 모든 실수에서 성립한다.", 'ans': 'O', 'exp': "분모 $x^2+2$는 항상 $2$ 이상이므로 $0$이 될 수 없습니다. 따라서 모든 실수에서 성립합니다."}, 
     
     # 주관식 문제 15개 (답은 정수)
     {'type': 'sub', 'level': '중', 'q': "유리식 $\\frac{x}{x-1} + \\frac{1}{1-x}$의 값을 간단히 하면? (단, $x \\ne 1$)", 'ans': 1, 'exp': "$1-x = -(x-1)$이므로, $\\frac{x}{x-1} - \\frac{1}{x-1} = \\frac{x-1}{x-1}$. 약분하면 $1$입니다."},
@@ -39,15 +39,16 @@ FULL_QUIZ_DATA = [
     {'type': 'sub', 'level': '상', 'q': "$\\frac{x}{x-2} = 1 + \\frac{k}{x-2}$일 때, 상수 $k$의 값은? (단, $x \\ne 2$)", 'ans': 2, 'exp': "$\\frac{x}{x-2} = \\frac{(x-2)+2}{x-2} = 1 + \\frac{2}{x-2}$이므로 $k=2$입니다."},
     {'type': 'sub', 'level': '상', 'q': "$\\frac{1}{x} + \\frac{1}{2x} + \\frac{1}{3x}$을 간단히 했을 때, 분모를 $6x$로 통분하면 분자는 $k$이다. $k$의 값은? (단, $x \\ne 0$)", 'ans': 11, 'exp': "$\\frac{6}{6x} + \\frac{3}{6x} + \\frac{2}{6x} = \\frac{11}{6x}$이므로 $k=11$입니다."},
     {'type': 'sub', 'level': '상', 'q': "$\\frac{x^2-1}{x^2+2x+1} \\times \\frac{x+1}{x-1}$을 간단히 했을 때의 상수 값은? (단, $x \\ne 1, -1$)", 'ans': 1, 'exp': "$\\frac{(x-1)(x+1)}{(x+1)^2} \\times \\frac{x+1}{x-1} = 1$입니다."},
-    {'type': 'sub', 'level': '하', 'q': "유리식 $\\frac{x+1}{x}$의 값을 $x=1$에서 구하면?", 'ans': 2, 'exp': "$x=1$을 대입하면 $\\frac{1+1}{1} = 2$입니다."}, # 추가 15번
+    {'type': 'sub', 'level': '하', 'q': "유리식 $\\frac{x+1}{x}$의 값을 $x=1$에서 구하면?", 'ans': 2, 'exp': "$x=1$을 대입하면 $\\frac{1+1}{1} = 2$입니다."},
 ]
 
 # ----------------------------------------------------
 # 2. 세션 초기화 및 문제 선택 로직
 # ----------------------------------------------------
+# (이하 생략 - 이전 코드와 동일)
+
 def restart_quiz():
     """세션 상태를 초기화하고 새로운 10문제를 랜덤으로 선택합니다."""
-    # 전체 30문제에서 10문제를 랜덤으로 추출
     st.session_state.question_indices = random.sample(range(len(FULL_QUIZ_DATA)), 10)
     st.session_state.current_index = 0
     st.session_state.score = 0
@@ -183,14 +184,15 @@ def main():
     col_tools, col_canvas = st.columns([1, 4])
     
     with col_tools:
-        # 필기 도구 선택
         drawing_mode = st.selectbox("도구 선택", ["freedraw", "line", "rect", "circle", "transform"], index=0, key=f"tool_{st.session_state.canvas_key}")
-        # 펜 색상 및 두께
         stroke_color = st.color_picker("펜/하이라이트 색상", "#000000", key=f"color_{st.session_state.canvas_key}")
         stroke_width = st.slider("펜 두께", 1, 20, 3, key=f"width_{st.session_state.canvas_key}")
         # 지우개 기능 (색상을 배경과 같게 설정)
         if st.button("지우개", key=f"eraser_{st.session_state.canvas_key}"):
-            stroke_color = "#FFFFFF" # 배경색과 동일하게 설정하여 지우개 효과
+            # st.rerun()을 사용하지 않고 상태만 변경하여 캔버스에 적용되도록 함. (Canvas는 Stateful)
+            st.session_state[f"color_{st.session_state.canvas_key}"] = "#FFFFFF"
+            st.rerun() # 색상 변경 후 재실행하여 적용
+            
         # 캔버스 초기화 (전체 지우기) - 키 변경을 통해 전체 초기화
         if st.button("전체 지우기", key=f"clear_canvas_{st.session_state.canvas_key}"):
             st.session_state.canvas_key += 1
@@ -198,16 +200,18 @@ def main():
 
     with col_canvas:
         # 캔버스 컴포넌트
+        # st_canvas는 key가 변경될 때 초기화되므로, next_question에서 key를 증가시키는 로직이 "다음 문제에서 풀이 지우기"를 구현함.
         canvas_result = st_canvas(
-            fill_color="rgba(255, 165, 0, 0.3)",  # 채우기 색상
+            fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=stroke_width,
-            stroke_color=stroke_color,
+            # 현재 선택된 색상을 사용 (지우개 버튼을 눌렀을 경우 흰색이 됨)
+            stroke_color=st.session_state.get(f"color_{st.session_state.canvas_key}", "#000000"), 
             background_color="#FFFFFF",
             update_streamlit=True,
             height=300,
             drawing_mode=drawing_mode,
             point_display_radius=0,
-            key=f"canvas_{st.session_state.canvas_key}", # 키가 변경되면 캔버스 내용 초기화
+            key=f"canvas_{st.session_state.canvas_key}",
         )
 
     # ----------------------------------------------------
