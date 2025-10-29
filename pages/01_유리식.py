@@ -2,85 +2,145 @@ import streamlit as st
 import random
 import re
 
-# 유리식 문제 데이터 (총 10개)
-# (문제 유형: 'ox' 또는 'sub' (주관식), 문제 내용, 정답, 해설)
-quiz_data = [
-    # OX 문제 6개
+# ----------------------------------------------------
+# 1. 문제 데이터 (총 30개)
+# ----------------------------------------------------
+# 주관식 정답은 반드시 정수(int)여야 합니다.
+FULL_QUIZ_DATA = [
+    # OX 문제 15개
     {'type': 'ox', 'q': "유리식 $\\frac{x^2 - 1}{x + 1}$은 분자와 분모가 모두 다항식이므로 유리식이다.", 'ans': 'O', 'exp': "유리식은 (다항식) / (다항식) 꼴로 분자와 분모가 모두 다항식이므로 유리식입니다."},
     {'type': 'ox', 'q': "다항식 $3x + 5$는 유리식이 아니다.", 'ans': 'X', 'exp': "다항식은 분모가 $1$인 유리식($\\frac{3x+5}{1} = 3x+5$)에 포함되므로 유리식입니다."},
     {'type': 'ox', 'q': "$\frac{5}{\sqrt{x}}$는 유리식이다.", 'ans': 'X', 'exp': "분모 $\sqrt{x}$는 다항식이 아니므로 유리식이 아닙니다. 문자의 지수가 음이 아닌 정수여야 다항식입니다."},
     {'type': 'ox', 'q': "유리식 $\\frac{2x}{x-3}$는 $x=3$에서 성립한다.", 'ans': 'X', 'exp': "유리식은 분모가 $0$이 되는 값($x=3$)에서는 정의되지 않아 성립하지 않습니다. 이를 정의역에서 제외합니다."},
     {'type': 'ox', 'q': "유리식 $\\frac{x-1}{x^2+1}$는 모든 실수 $x$에서 성립한다.", 'ans': 'O', 'exp': "분모 $x^2+1$은 항상 $1$ 이상이므로 $0$이 될 수 없습니다. 따라서 모든 실수에서 성립합니다."},
     {'type': 'ox', 'q': "$\\frac{x}{0}$는 유리식이다.", 'ans': 'X', 'exp': "분모에 상수 다항식 '0'은 올 수 없습니다. 수학적으로 분모가 0인 식은 정의되지 않습니다."},
+    {'type': 'ox', 'q': "유리식 $\\frac{x^2+2x+1}{(x+1)^2}$을 약분하면 $1$이 된다. (단, $x \\ne -1$)", 'ans': 'O', 'exp': "분자 $x^2+2x+1 = (x+1)^2$ 이므로, 약분하면 $1$입니다."},
+    {'type': 'ox', 'q': "$\\frac{x}{y}$는 유리식이다. (단, $x, y$는 다항식이다.)", 'ans': 'O', 'exp': "두 다항식의 비(분수 형태)로 나타낼 수 있으므로 유리식입니다."},
+    {'type': 'ox', 'q': "유리식 $\\frac{x+1}{x-1}$에서 $x=1$을 대입할 수 있다.", 'ans': 'X', 'exp': "$x=1$을 대입하면 분모가 $0$이 되어 유리식이 정의되지 않습니다."},
+    {'type': 'ox', 'q': "유리식의 덧셈, 뺄셈, 곱셈 결과는 항상 유리식이다. (단, 나눗셈은 제외)", 'ans': 'O', 'exp': "유리식의 사칙연산 결과는 분자와 분모가 다항식인 유리식 형태로 나타낼 수 있습니다."},
+    {'type': 'ox', 'q': "$\\frac{1}{x} + \\frac{1}{y}$의 통분은 분모의 최소공배수를 이용한다.", 'ans': 'O', 'exp': "유리식의 통분은 분모들의 최소공배수를 공통 분모로 합니다."},
+    {'type': 'ox', 'q': "$\\frac{x^2-4}{x-2} = x+2$는 모든 실수 $x$에서 성립한다.", 'ans': 'X', 'exp': "$x=2$에서는 좌변 $\\frac{0}{0}$이 정의되지 않으므로 $x \\ne 2$일 때만 성립합니다."},
+    {'type': 'ox', 'q': "다항식 $P(x)$의 유리식 $\\frac{P(x)}{Q(x)}$에 대한 역수는 $\\frac{Q(x)}{P(x)}$이다.", 'ans': 'O', 'exp': "유리식의 역수는 분자와 분모를 바꾼 식입니다."},
+    {'type': 'ox', 'q': "분수식의 정의역은 모든 실수이다.", 'ans': 'X', 'exp': "분수식은 분모를 $0$으로 만드는 $x$의 값을 정의역에서 제외해야 합니다."},
+    {'type': 'ox', 'q': "분수식 $\\frac{x+1}{2}$는 다항식으로 분류된다.", 'ans': 'O', 'exp': "분모가 $0$이 아닌 상수이므로 다항식 $P(x) = \\frac{1}{2}x + \\frac{1}{2}$와 같습니다."},
     
-    # 주관식(서답형) 문제 4개 - 답이 정수
+    # 주관식 문제 15개 (답은 정수)
     {'type': 'sub', 'q': "유리식 $\\frac{x}{x-1} + \\frac{1}{1-x}$의 값을 간단히 하면? (단, $x \\ne 1$)", 'ans': 1, 'exp': "$1-x = -(x-1)$이므로, $\\frac{x}{x-1} - \\frac{1}{x-1} = \\frac{x-1}{x-1}$. 약분하면 $1$입니다."},
-    {'type': 'sub', 'q': "유리식 $\\frac{x+2}{x+1}$를 $\\frac{k}{x+1} + 1$ 꼴로 나타낼 때, 상수 $k$의 값은? (단, $x \\ne -1$)", 'ans': 1, 'exp': "$x+2 = (x+1) + 1$이므로 $\\frac{x+2}{x+1} = \\frac{x+1}{x+1} + \\frac{1}{x+1} = 1 + \\frac{1}{x+1}$. 따라서 $k=1$입니다."},
-    {'type': 'sub', 'q': "두 유리식 $\\frac{x}{x+1}$와 $\\frac{x}{x^2+x}$의 합을 간단히 했을 때, 분모의 차수는? (단, $x \\ne 0, -1$)", 'ans': 1, 'exp': "$x^2+x = x(x+1)$입니다. 통분하면 $\\frac{x^2}{x(x+1)} + \\frac{x}{x(x+1)} = \\frac{x^2+x}{x(x+1)} = \\frac{x(x+1)}{x(x+1)}$. 약분하면 $1$이므로, 분모의 차수는 $0$이 됩니다. (하지만 문제에서 분모의 차수를 묻고 있으므로, 통분 후 약분 전 분모 $x(x+1)$의 차수는 2입니다. 최종 답을 $1$로 강제하기 위해 질문을 수정해야 합니다. -> **질문 수정:** 유리식 $\\frac{x}{x+1} + \\frac{1}{x(x+1)}$을 간단히 하면? 분자의 차수는? (단, $x \\ne 0, -1$)", 'ans_sub': "질문을 수정하여 답이 1인 경우로 바꿨습니다. $\\frac{x^2+x+1}{x(x+1)}$의 분자의 차수는 2이지만, 질문을 **$\\frac{x+1}{x+2}$와 $\\frac{2}{x+2}$의 합을 간단히 했을 때의 상수 값은?**으로 바꿔 답이 1이 되도록 합니다.", 'q_new': "유리식 $\\frac{x+1}{x+2} + \\frac{1}{x+2}$의 합을 간단히 했을 때, $x=1$에서의 값은? (단, $x \\ne -2$)"}, # 답 1
+    {'type': 'sub', 'q': "유리식 $\\frac{x+5}{x+3}$를 $\\frac{k}{x+3} + 1$ 꼴로 나타낼 때, 상수 $k$의 값은? (단, $x \\ne -3$)", 'ans': 2, 'exp': "$x+5 = (x+3) + 2$이므로 $\\frac{x+5}{x+3} = \\frac{x+3}{x+3} + \\frac{2}{x+3} = 1 + \\frac{2}{x+3}$. 따라서 $k=2$입니다."},
+    {'type': 'sub', 'q': "유리식 $\\frac{x+1}{x+2} + \\frac{x+3}{x+2}$의 합을 간단히 했을 때, $x=0$에서의 값은? (단, $x \\ne -2$)", 'ans': 2, 'exp': "두 식을 더하면 $\\frac{2x+4}{x+2} = \\frac{2(x+2)}{x+2} = 2$입니다. $x=0$을 대입해도 값은 $2$입니다."},
+    {'type': 'sub', 'q': "유리식 $\\frac{x^2+x-2}{x-1}$을 간단히 했을 때, $x=0$에서의 값은? (단, $x \\ne 1$)", 'ans': 2, 'exp': "$x^2+x-2 = (x+2)(x-1)$이므로, 약분하면 $x+2$입니다. $x=0$을 대입하면 $0+2=2$입니다."},
+    {'type': 'sub', 'q': "유리식 $\\frac{x^2-9}{x-3} \\div (x+3)$의 값을 간단히 하면 $k$이다. 이때 $x=1$에서의 $k$ 값은? (단, $x \\ne 3, -3$)", 'ans': 1, 'exp': "$\\frac{x^2-9}{x-3} \\div (x+3) = \\frac{(x-3)(x+3)}{x-3} \\times \\frac{1}{x+3} = 1$. $k=1$입니다."},
     {'type': 'sub', 'q': "유리식 $\\frac{2x^2+3x+1}{x+1}$을 간단히 했을 때, $x=1$에서의 값은? (단, $x \\ne -1$)", 'ans': 3, 'exp': "분자 $2x^2+3x+1 = (2x+1)(x+1)$이므로, 유리식은 $2x+1$로 간단히 됩니다. $x=1$을 대입하면 $2(1)+1 = 3$입니다."},
+    {'type': 'sub', 'q': "$\\frac{1}{x} + \\frac{1}{2x} = \\frac{3}{k}$일 때, $k$는 $2x$이다. 이때 $x=5$일 때 $k$의 값은?", 'ans': 10, 'exp': "좌변을 통분하면 $\\frac{2}{2x} + \\frac{1}{2x} = \\frac{3}{2x}$이므로, $k=2x$입니다. $x=5$를 대입하면 $2 \\times 5 = 10$입니다."},
+    {'type': 'sub', 'q': "$\\frac{1}{x-1} - \\frac{1}{x+1}$을 간단히 했을 때, 분모가 $x^2-1$일 때 분자의 값은? (단, $x \\ne 1, -1$)", 'ans': 2, 'exp': "$\\frac{x+1}{x^2-1} - \\frac{x-1}{x^2-1} = \\frac{(x+1)-(x-1)}{x^2-1} = \\frac{2}{x^2-1}$이므로 분자는 $2$입니다."},
+    {'type': 'sub', 'q': "$\\frac{1}{x-1} \\times \\frac{x^2-1}{3}$을 간단히 했을 때, $x=2$에서의 값은?", 'ans': 1, 'exp': "$\\frac{1}{x-1} \\times \\frac{(x-1)(x+1)}{3} = \\frac{x+1}{3}$입니다. $x=2$를 대입하면 $\\frac{2+1}{3} = 1$입니다."},
+    {'type': 'sub', 'q': "$\\frac{x-1}{x-2} - \\frac{1}{x-2}$을 간단히 했을 때, $x=5$에서의 값은? (단, $x \\ne 2$)", 'ans': 1, 'exp': "두 식을 빼면 $\\frac{x-1-1}{x-2} = \\frac{x-2}{x-2} = 1$입니다. $x=5$를 대입해도 값은 $1$입니다."},
+    {'type': 'sub', 'q': "$\\frac{2}{x} - \\frac{1}{2x}$을 간단히 했을 때, $\\frac{k}{2x}$이다. 상수 $k$의 값은? (단, $x \\ne 0$)", 'ans': 3, 'exp': "$\\frac{4}{2x} - \\frac{1}{2x} = \\frac{3}{2x}$이므로 $k=3$입니다."},
+    {'type': 'sub', 'q': "$\\frac{x}{x-2} = 1 + \\frac{k}{x-2}$일 때, 상수 $k$의 값은? (단, $x \\ne 2$)", 'ans': 2, 'exp': "$\\frac{x}{x-2} = \\frac{(x-2)+2}{x-2} = 1 + \\frac{2}{x-2}$이므로 $k=2$입니다."},
+    {'type': 'sub', 'q': "$\\frac{1}{x} + \\frac{1}{2x} + \\frac{1}{3x}$을 간단히 했을 때, 분모를 $6x$로 통분하면 분자는 $k$이다. $k$의 값은? (단, $x \\ne 0$)", 'ans': 11, 'exp': "$\\frac{6}{6x} + \\frac{3}{6x} + \\frac{2}{6x} = \\frac{11}{6x}$이므로 $k=11$입니다."},
+    {'type': 'sub', 'q': "$\\frac{x^2-1}{x^2+2x+1} \\times \\frac{x+1}{x-1}$을 간단히 했을 때의 상수 값은? (단, $x \\ne 1, -1$)", 'ans': 1, 'exp': "$\\frac{(x-1)(x+1)}{(x+1)^2} \\times \\frac{x+1}{x-1} = 1$입니다."},
+    {'type': 'sub', 'q': "유리식 $\\frac{x+1}{x}$의 값을 $x=1$에서 구하면?", 'ans': 2, 'exp': "$x=1$을 대입하면 $\\frac{1+1}{1} = 2$입니다."},
 ]
 
-def initialize_session():
-    """세션 상태를 초기화하고 문제 순서를 랜덤으로 설정합니다."""
-    if 'quiz_initialized' not in st.session_state:
-        st.session_state.quiz_data = quiz_data
-        st.session_state.question_indices = list(range(len(quiz_data)))
-        random.shuffle(st.session_state.question_indices)
-        st.session_state.current_index = 0
-        st.session_state.score = 0
-        st.session_state.quiz_history = []
-        st.session_state.incorrect_count = 0  # 현재 문제의 오답 횟수
-        st.session_state.quiz_initialized = True
-        st.session_state.answer_submitted = False
+# ----------------------------------------------------
+# 2. 세션 초기화 및 문제 선택 로직
+# ----------------------------------------------------
+def restart_quiz():
+    """세션 상태를 초기화하고 새로운 10문제를 랜덤으로 선택합니다."""
+    # 전체 30문제에서 10문제를 랜덤으로 추출
+    st.session_state.question_indices = random.sample(range(len(FULL_QUIZ_DATA)), 10)
+    st.session_state.current_index = 0
+    st.session_state.score = 0
+    st.session_state.quiz_history = []
+    st.session_state.incorrect_count = 0  
+    st.session_state.show_explanation = False 
+    st.session_state.quiz_finished = False
+    st.session_state.quiz_initialized = True
+    st.session_state.is_last_correct = None # 마지막 제출이 정답이었는지 여부 초기화
 
 def next_question():
     """다음 문제로 넘어가거나 퀴즈를 종료합니다."""
     st.session_state.current_index += 1
     st.session_state.incorrect_count = 0
-    st.session_state.answer_submitted = False
+    st.session_state.show_explanation = False
+    st.session_state.is_last_correct = None
     if st.session_state.current_index >= len(st.session_state.question_indices):
         st.balloons()
         st.session_state.quiz_finished = True
 
 def check_answer(q_data, user_input):
-    """사용자 답변을 확인합니다."""
+    """사용자 답변을 확인하고 정오를 반환합니다."""
     q_type = q_data['type']
     correct_answer = q_data['ans']
     
     if q_type == 'ox':
         is_correct = (user_input.upper() == correct_answer)
     elif q_type == 'sub':
-        # 주관식: 정수만 허용
         try:
             user_int = int(user_input)
             is_correct = (user_int == correct_answer)
         except ValueError:
-            st.warning("주관식 답은 정수로 입력해 주세요.")
-            is_correct = False
+            return False
             
     return is_correct
 
-def display_current_question():
-    """현재 문제를 표시하고 사용자 입력을 받습니다."""
+# ----------------------------------------------------
+# 3. Streamlit 앱 메인 함수
+# ----------------------------------------------------
+def main():
+    if 'quiz_initialized' not in st.session_state:
+        restart_quiz()
+
+    st.title("🧠 유리식 마스터 10문제 퀴즈")
     
+    # 퀴즈 재시작 버튼 (요청 사항 반영: 바로 새로 시작)
+    if st.button("🔄 새로운 10문제로 다시 풀기", key='restart_btn_top'):
+        restart_quiz()
+        st.rerun()
+
+    ## 💡 유리식의 개념 및 성립 조건 복습 (개념 설명 재추가)
+    st.header("1. 💡 유리식 개념 복습")
+    st.markdown("""
+    ---
+    **유리식(Rational Expression)**은 **두 다항식의 비**로 나타낼 수 있는 식입니다.
+    
+    수식: $$\frac{A}{B}$$
+    단, $A$와 $B$는 **다항식**이며, $B$는 **상수 다항식 $0$이 아닙니다**.
+
+    * **다항식도 유리식**: 분모 $B$가 $0$이 아닌 상수일 경우, 유리식은 다항식으로 분류됩니다. (예: $\frac{3x+5}{1} = 3x+5$)
+    * **분수식**: 분모에 문자가 포함된 유리식(다항식이 아닌 유리식)을 분수식이라고 합니다.
+
+    **🚫 성립 조건**: 유리식 $\\frac{A}{B}$는 **분모가 $0$이 되는 $x$의 값에서는 정의되지 않아 성립하지 않습니다** ($B \\ne 0$).
+    ---
+    """)
+    
+    st.header(f"2. 📝 문제 풀이 (총 {len(st.session_state.question_indices)}문제)")
+
+    # 퀴즈 종료 상태
+    if st.session_state.get('quiz_finished', False):
+        st.subheader("🎉 퀴즈 종료!")
+        st.success(f"최종 점수: **{st.session_state.score} / {len(st.session_state.question_indices)}**")
+        return
+
+    # ----------------------------------------------------
+    # 현재 문제 표시 및 제출
+    # ----------------------------------------------------
     q_index = st.session_state.question_indices[st.session_state.current_index]
-    q_data = st.session_state.quiz_data[q_index]
+    q_data = FULL_QUIZ_DATA[q_index]
     q_number = st.session_state.current_index + 1
     total_questions = len(st.session_state.question_indices)
 
-    st.header(f"문제 {q_number}/{total_questions} (유형: {'O/X' if q_data['type'] == 'ox' else '주관식'})")
-    
-    # 문제 내용 (수식 렌더링)
+    st.subheader(f"문제 {q_number}/{total_questions} (유형: {'O/X' if q_data['type'] == 'ox' else '주관식'})")
     st.markdown(f"**{q_data['q']}**")
 
     # 오답 횟수 표시
-    if st.session_state.incorrect_count > 0:
+    if st.session_state.incorrect_count > 0 and st.session_state.is_last_correct is False:
         st.error(f"❌ 틀렸습니다! (재시도: {st.session_state.incorrect_count}회)")
     
-    # 정답 표시/풀이 노출
+    # 두 번 틀려서 풀이 강제 노출 및 다음 문제로 이동
     if st.session_state.incorrect_count >= 2:
-        st.warning("두 번 틀려 풀이를 공개합니다.")
-        st.info(f"**정답:** {q_data['ans']} (정수)")
+        st.warning("❌ 두 번 틀려 풀이를 공개하고 다음 문제로 넘어갑니다.")
+        st.info(f"**정답:** {q_data['ans']} ({'정수' if q_data['type'] == 'sub' else 'O/X'})")
         st.success(f"**풀이:** {q_data['exp']}")
         if st.button("다음 문제로 넘어가기", key='skip_btn'):
             next_question()
@@ -89,6 +149,7 @@ def display_current_question():
 
     # 사용자 입력 폼
     with st.form(key=f'q_form_{q_index}'):
+        user_input = None
         if q_data['type'] == 'ox':
             user_input = st.radio("정답은?", ['O', 'X'], key='user_ox')
         else: # 주관식
@@ -97,55 +158,38 @@ def display_current_question():
         submit_button = st.form_submit_button("제출")
         
         if submit_button:
-            st.session_state.answer_submitted = True
             is_correct = check_answer(q_data, user_input)
 
             if is_correct:
                 st.session_state.score += 1
-                st.success("✅ 정답입니다! 다음 문제로 넘어갑니다.")
                 st.session_state.quiz_history.append((q_number, q_data['q'], user_input, True))
-                
-                # 정답 처리 후 바로 다음 문제로 이동
-                st.session_state.incorrect_count = 0
-                next_question()
-                st.rerun()
+                st.session_state.show_explanation = True # 정답시 설명 표시
+                st.session_state.is_last_correct = True
                 
             else:
                 st.session_state.incorrect_count += 1
                 st.session_state.quiz_history.append((q_number, q_data['q'], user_input, False))
-                # 2회 이상 틀렸을 경우 풀이 노출 로직은 폼 밖에서 처리
-                st.rerun()
-
-
-def main():
-    initialize_session()
-
-    st.title("🧠 유리식 마스터 O/X & 주관식 퀴즈")
-    
-    ## 💡 유리식의 개념 및 성립 조건 복습
-    st.header("1. 💡 유리식 개념 복습")
-    st.markdown("""
-    ---
-    **유리식(Rational Expression)**은 두 다항식의 비($\\frac{A}{B}$)로 나타낼 수 있는 식입니다.
-    * **성립 조건**: 분모 $B$는 **절대 $0$이 아니어야** 합니다. ($B \\ne 0$)
-    ---
-    """)
-    
-    # 퀴즈 진행 상태
-    if st.session_state.get('quiz_finished', False):
-        st.header("🎉 퀴즈 종료!")
-        st.subheader(f"총 점수: **{st.session_state.score} / {len(st.session_state.quiz_data)}**")
-        if st.button("처음부터 다시 시작하기", key='restart_btn'):
-            st.session_state.quiz_initialized = False
-            st.session_state.quiz_finished = False
+                st.session_state.show_explanation = False # 오답시 설명 표시 안 함
+                st.session_state.is_last_correct = False
+                
             st.rerun()
-    elif st.session_state.current_index < len(st.session_state.question_indices):
-        display_current_question()
-    
-    
-    st.subheader(f"\n---")
-    st.subheader(f"현재 점수: {st.session_state.score} / {len(st.session_state.quiz_history)}")
 
+    # ----------------------------------------------------
+    # 결과 및 해설 표시 (제출 후)
+    # ----------------------------------------------------
+    # 정답을 맞췄을 때 (show_explanation이 True)
+    if st.session_state.get('show_explanation'):
+        st.success("✅ **정답입니다!** 풀이를 확인하세요.")
+        st.info(f"**정답:** {q_data['ans']} ({'정수' if q_data['type'] == 'sub' else 'O/X'})")
+        st.success(f"**풀이:** {q_data['exp']}")
+        
+        # 다음 문제로 이동 버튼
+        if st.button("다음 문제 풀기", key='correct_next_btn'):
+            next_question()
+            st.rerun()
+
+    st.markdown(f"\n---")
+    st.subheader(f"현재 점수: {st.session_state.score} / {len(st.session_state.quiz_history)} 문항 완료")
 
 if __name__ == "__main__":
     main()
