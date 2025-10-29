@@ -25,4 +25,127 @@ def initialize_session():
     if 'quiz_initialized' not in st.session_state:
         st.session_state.quiz_data = quiz_data
         st.session_state.question_indices = list(range(len(quiz_data)))
-        random.shuffle
+        random.shuffle(st.session_state.question_indices)
+        st.session_state.current_index = 0
+        st.session_state.score = 0
+        st.session_state.quiz_history = []
+        st.session_state.incorrect_count = 0  # 현재 문제의 오답 횟수
+        st.session_state.quiz_initialized = True
+        st.session_state.answer_submitted = False
+
+def next_question():
+    """다음 문제로 넘어가거나 퀴즈를 종료합니다."""
+    st.session_state.current_index += 1
+    st.session_state.incorrect_count = 0
+    st.session_state.answer_submitted = False
+    if st.session_state.current_index >= len(st.session_state.question_indices):
+        st.balloons()
+        st.session_state.quiz_finished = True
+
+def check_answer(q_data, user_input):
+    """사용자 답변을 확인합니다."""
+    q_type = q_data['type']
+    correct_answer = q_data['ans']
+    
+    if q_type == 'ox':
+        is_correct = (user_input.upper() == correct_answer)
+    elif q_type == 'sub':
+        # 주관식: 정수만 허용
+        try:
+            user_int = int(user_input)
+            is_correct = (user_int == correct_answer)
+        except ValueError:
+            st.warning("주관식 답은 정수로 입력해 주세요.")
+            is_correct = False
+            
+    return is_correct
+
+def display_current_question():
+    """현재 문제를 표시하고 사용자 입력을 받습니다."""
+    
+    q_index = st.session_state.question_indices[st.session_state.current_index]
+    q_data = st.session_state.quiz_data[q_index]
+    q_number = st.session_state.current_index + 1
+    total_questions = len(st.session_state.question_indices)
+
+    st.header(f"문제 {q_number}/{total_questions} (유형: {'O/X' if q_data['type'] == 'ox' else '주관식'})")
+    
+    # 문제 내용 (수식 렌더링)
+    st.markdown(f"**{q_data['q']}**")
+
+    # 오답 횟수 표시
+    if st.session_state.incorrect_count > 0:
+        st.error(f"❌ 틀렸습니다! (재시도: {st.session_state.incorrect_count}회)")
+    
+    # 정답 표시/풀이 노출
+    if st.session_state.incorrect_count >= 2:
+        st.warning("두 번 틀려 풀이를 공개합니다.")
+        st.info(f"**정답:** {q_data['ans']} (정수)")
+        st.success(f"**풀이:** {q_data['exp']}")
+        if st.button("다음 문제로 넘어가기", key='skip_btn'):
+            next_question()
+            st.rerun()
+        return
+
+    # 사용자 입력 폼
+    with st.form(key=f'q_form_{q_index}'):
+        if q_data['type'] == 'ox':
+            user_input = st.radio("정답은?", ['O', 'X'], key='user_ox')
+        else: # 주관식
+            user_input = st.text_input("정답을 정수로 입력하세요:", key='user_sub')
+
+        submit_button = st.form_submit_button("제출")
+        
+        if submit_button:
+            st.session_state.answer_submitted = True
+            is_correct = check_answer(q_data, user_input)
+
+            if is_correct:
+                st.session_state.score += 1
+                st.success("✅ 정답입니다! 다음 문제로 넘어갑니다.")
+                st.session_state.quiz_history.append((q_number, q_data['q'], user_input, True))
+                
+                # 정답 처리 후 바로 다음 문제로 이동
+                st.session_state.incorrect_count = 0
+                next_question()
+                st.rerun()
+                
+            else:
+                st.session_state.incorrect_count += 1
+                st.session_state.quiz_history.append((q_number, q_data['q'], user_input, False))
+                # 2회 이상 틀렸을 경우 풀이 노출 로직은 폼 밖에서 처리
+                st.rerun()
+
+
+def main():
+    initialize_session()
+
+    st.title("🧠 유리식 마스터 O/X & 주관식 퀴즈")
+    
+    ## 💡 유리식의 개념 및 성립 조건 복습
+    st.header("1. 💡 유리식 개념 복습")
+    st.markdown("""
+    ---
+    **유리식(Rational Expression)**은 두 다항식의 비($\\frac{A}{B}$)로 나타낼 수 있는 식입니다.
+    * **성립 조건**: 분모 $B$는 **절대 $0$이 아니어야** 합니다. ($B \\ne 0$)
+    ---
+    """)
+    
+    # 퀴즈 진행 상태
+    if st.session_state.get('quiz_finished', False):
+        st.header("🎉 퀴즈 종료!")
+        st.subheader(f"총 점수: **{st.session_state.score} / {len(st.session_state.quiz_data)}**")
+        if st.button("처음부터 다시 시작하기", key='restart_btn'):
+            st.session_state.quiz_initialized = False
+            st.session_state.quiz_finished = False
+            st.rerun()
+    elif st.session_state.current_index < len(st.session_state.question_indices):
+        display_current_question()
+    
+    
+    st.subheader(f"\n---")
+    st.subheader(f"현재 점수: {st.session_state.score} / {len(st.session_state.quiz_history)}")
+
+
+if __name__ == "__main__":
+    main()
