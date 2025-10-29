@@ -1,5 +1,4 @@
 streamlit
 matplotlib
-# 추가로 필요한 경우:
 numpy
 pandas
