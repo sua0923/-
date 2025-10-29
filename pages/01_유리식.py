@@ -4,24 +4,39 @@ from streamlit_drawable_canvas import st_canvas
 import os
 
 # ----------------------------------------------------
-# 0. 이미지 파일 경로 설정 함수 (JPEG 수정)
+# 0. 이미지 파일 경로 설정 함수 (경로 수정 및 .jpeg 처리)
 # ----------------------------------------------------
 def get_image_path(image_name_base):
-    """지정된 이미지 이름에 해당하는 전체 파일 경로를 반환합니다. (확장자: .jpeg)"""
-    # .jpeg 확장자를 사용하도록 수정
+    """
+    Streamlit Cloud 환경에서 파일 위치(pages 폴더 내부)에 관계없이 
+    최상위 images 폴더를 참조하도록 경로를 설정합니다. (확장자: .jpeg)
+    """
     image_name = image_name_base.replace(".png", ".jpeg")
-    base_dir = os.path.dirname(__file__)
+    
+    # 현재 파일의 디렉토리를 얻습니다. (예: /app/pages)
+    current_dir = os.path.dirname(__file__)
+    
+    # 퀴즈 코드가 'pages' 폴더 내부에 있다고 가정하고, 상위 디렉토리(루트)로 이동
+    if os.path.basename(current_dir) == 'pages':
+        # 상위 디렉토리(루트)를 참조: /app/images/[이미지 이름].jpeg
+        base_dir = os.path.dirname(current_dir)
+    else:
+        # 퀴즈 코드가 루트에 있다면
+        base_dir = current_dir
+        
     image_path = os.path.join(base_dir, "images", image_name)
+    
     return image_path
 
 def display_feedback_image(image_name_base):
     """이미지를 Streamlit 앱에 표시합니다."""
     path = get_image_path(image_name_base)
     if os.path.exists(path):
-        st.image(path, width=200) # 이미지 크기 조정 가능
+        st.image(path, width=200)
     else:
-        # 이미지를 찾을 수 없는 경우, 사용자에게 어떤 파일이 필요한지 알려줍니다.
-        st.warning(f"이미지 파일 '{image_name_base.replace('.png', '.jpeg')}'을(를) 찾을 수 없습니다. (경로: {path})")
+        # 파일 경로와 이름 오류 시 안내
+        st.error(f"⚠️ **이미지 파일을 찾을 수 없습니다!**")
+        st.caption(f"**필요한 파일 이름:** `{image_name_base.replace('.png', '.jpeg')}` (images 폴더 내에 있어야 함)")
 
 
 # ----------------------------------------------------
@@ -64,7 +79,7 @@ FULL_QUIZ_DATA = [
 ]
 
 # ----------------------------------------------------
-# 2. 세션 초기화 및 문제 선택 로직
+# 2. 세션 초기화 및 문제 선택 로직 - 이전과 동일
 # ----------------------------------------------------
 def restart_quiz():
     """세션 상태를 초기화하고 새로운 10문제를 랜덤으로 선택합니다."""
@@ -140,8 +155,10 @@ def main():
         
         # 최종 결과 이미지
         if st.session_state.score >= 6:
+            st.markdown("### **축하합니다! 🏆 마스터 등극!**")
             display_feedback_image("success_final.jpeg")
         else:
+            st.markdown("### **아쉽습니다... 😢 다시 도전!**")
             display_feedback_image("fail_final.jpeg")
             
         return
