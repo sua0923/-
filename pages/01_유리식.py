@@ -42,11 +42,6 @@ def display_feedback_image(image_name_base):
         st.error(f"⚠️ **이미지 파일을 찾을 수 없습니다!**")
         st.caption(f"**필요한 파일 이름:** `{image_name_base.replace('.png', '.jpeg')}` (images 폴더 내에 있어야 함)")
 
-# ----------------------------------------------------
-# 1. 문제 데이터 (총 30개)
-# ----------------------------------------------------
-# @st.cache_data 데코레이터를 사용하여 데이터 로드를 캐싱합니다. (옵션: Streamlit 성능 향상)
-# 그러나 Streamlit Cloud 환경에서 문제 발생 가능성이 있어, 이번에는 일반 함수로 유지합니다.
 def get_full_quiz_data():
     """문제 데이터 목록을 반환합니다. (모든 딕셔너리 끝에 콤마(,)가 있음)"""
     return [
@@ -152,6 +147,18 @@ def main():
         restart_quiz()
         st.rerun()
 
+    ## 💡 유리식의 개념 및 성립 조건 복습 (누락되었던 개념 설명 추가)
+    st.header("1. 💡 유리식 개념 복습")
+    st.markdown("""
+    ---
+    **유리식(Rational Expression)**은 두 다항식의 비($\\frac{A}{B}$)로 나타낼 수 있는 식입니다.
+    
+    수식: $$\frac{A}{B}$$
+    * **성립 조건**: 분모 $B$는 **절대 $0$이 아니어야** 합니다 ($B \\ne 0$).
+    * **분류**: 다항식과 분수식으로 나눌 수 있습니다. 다항식은 분모가 상수 $c$인 유리식($\frac{A}{c}$)입니다.
+    ---
+    """)
+    
     st.header(f"2. 📝 문제 풀이 (총 {len(st.session_state.question_indices)}문제)")
 
     # 퀴즈 종료 상태
